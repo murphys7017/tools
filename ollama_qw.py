@@ -14,10 +14,11 @@ class OllamaQW():
             {"role": "system", "content": "你是Alice,是YakumoAki在设计的智能语音助手"}
         ]
     messages = []
-    def __init__(self, model_name: str):
-        import yaml
+    def __init__(self, model_name: str,tools=None):
         self.model_name = model_name
-        logger.info(self.tools)
+        if tools:
+            self.tools = tools
+            logger.info(self.tools)
         
     def chat(self, msg):
         self.messages.append({'role': 'user', 'content': msg})

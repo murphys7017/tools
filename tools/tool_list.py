@@ -20,3 +20,6 @@ def open_light():
     cmd_line = r'"C:\Users\Administrator\Downloads\OpenRGB_0.9_Windows_64_b5f46e3\OpenRGB Windows 64-bit\OpenRGB.exe" --profile nomal'
     run_cmd(cmd_line)
     return "打开了"
+
+def run_software(software_name):
+    print(f"Running software {software_name}")
