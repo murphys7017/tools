@@ -6,9 +6,7 @@ class OllamaQW():
     import importlib
     module_name = 'tools.tool_list'
     module = importlib.import_module(module_name)
-    # 加载工具函数定义
-    tools = tool_config.tools
-    
+    # 加载工具函数定义 
     # 模型预设
     base_message = [
             {"role": "system", "content": "你是Alice,是YakumoAki在设计的智能语音助手"}

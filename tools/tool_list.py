@@ -1,4 +1,4 @@
-
+from .tool_config import tools_variable
 def run_cmd( cmd_str='', echo_print=1):
     """
     执行cmd命令，不显示执行过程中弹出的黑框
@@ -8,17 +8,17 @@ def run_cmd( cmd_str='', echo_print=1):
     """
     from subprocess import run
     if echo_print == 1:
-        print('\n执行cmd指令="{}"'.format(cmd_str))
+        print(f'\n执行cmd指令="{cmd_str}"')
     run(cmd_str, shell=True)
     
 def close_light():
     cmd_line = r'"C:\Users\Administrator\Downloads\OpenRGB_0.9_Windows_64_b5f46e3\OpenRGB Windows 64-bit\OpenRGB.exe" --profile close'
-    run_cmd(cmd_line)
+    run_cmd(tools_variable['CloseLight'])
     return "关了"
 
 def open_light():
     cmd_line = r'"C:\Users\Administrator\Downloads\OpenRGB_0.9_Windows_64_b5f46e3\OpenRGB Windows 64-bit\OpenRGB.exe" --profile nomal'
-    run_cmd(cmd_line)
+    run_cmd(tools_variable['OpenLight'])
     return "打开了"
 
 def run_software(software_name):
