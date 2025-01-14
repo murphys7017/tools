@@ -58,13 +58,13 @@ tools_description = {
         "description": "打开机箱的灯。",
     },    
     'run_software':{
-        "description": "根据给出的名称去运行指定的程序软件或者脚本等可执行的。",
+        "description": "打开或者运行程序、软件、应用、脚本等。",
         "parameters":{
             "software_name":{
                 "type": "string",
                 "required": True,
                 "enum": list(generate_name_path_map(folder_paths=tools_variable['RunSoftware']['Paths'], exclude_name=tools_variable['RunSoftware']['Exclude']['Name'], exclude_path=tools_variable['RunSoftware']['Exclude']['Path']).keys()),
-                "description": "需要运行或者执行的软件程序或者脚本的名称"
+                "description": "需要打开、运行或者执行的软件程序或者脚本的名称"
             }
         }
     }
