@@ -7,5 +7,5 @@ ToolsSet:
     Exclude:
       Name: 卸载,Installer, Help,配置工具,Uninstall,Release Notes,FAQ,ReadMe,User’s Guide
       Path: Windows Kits,Git,MySQL Server 8.0,Stardock,Tesseract-OCR,Visual Studio 2022,NVIDIA Corporation,Anaconda3 (64-bit)
-  CloseLight: C:\Users\Administrator\Downloads\OpenRGB_0.9_Windows_64_b5f46e3\OpenRGB Windows 64-bit\OpenRGB.exe --profile close
-  OpenLight: C:\Users\Administrator\Downloads\OpenRGB_0.9_Windows_64_b5f46e3\OpenRGB Windows 64-bit\OpenRGB.exe --profile nomal
+  CloseLight: '"C:\Users\Administrator\Downloads\OpenRGB_0.9_Windows_64_b5f46e3\OpenRGB Windows 64-bit\OpenRGB.exe" --profile close'
+  OpenLight: '"C:\Users\Administrator\Downloads\OpenRGB_0.9_Windows_64_b5f46e3\OpenRGB Windows 64-bit\OpenRGB.exe" --profile nomal'

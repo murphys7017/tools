@@ -12,12 +12,10 @@ def run_cmd( cmd_str='', echo_print=1):
     run(cmd_str, shell=True)
     
 def close_light():
-    cmd_line = r'"C:\Users\Administrator\Downloads\OpenRGB_0.9_Windows_64_b5f46e3\OpenRGB Windows 64-bit\OpenRGB.exe" --profile close'
     run_cmd(tools_variable['CloseLight'])
     return "关了"
 
 def open_light():
-    cmd_line = r'"C:\Users\Administrator\Downloads\OpenRGB_0.9_Windows_64_b5f46e3\OpenRGB Windows 64-bit\OpenRGB.exe" --profile nomal'
     run_cmd(tools_variable['OpenLight'])
     return "打开了"
 

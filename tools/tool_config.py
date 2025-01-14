@@ -1,5 +1,8 @@
 import yaml
 import os
+import importlib
+import json
+    
 with open('Config.yml', 'r', encoding='utf-8') as file:
     config = yaml.load(file, Loader=yaml.FullLoader)
 tools_variable = config['ToolsSet']
@@ -49,6 +52,14 @@ def generate_tools_desc():
     return tools_desc
 
 
+module_name = 'tools.tool_list'
+module = importlib.import_module(module_name)
+def get_tool_res(fn_name,fn_args):
+    my_function = getattr(module, fn_name)
+    fn_res: str = my_function(**fn_args)
+    return json.dumps(fn_res)
+
+
 
 tools_description = {
     'close_light' :{
@@ -69,64 +80,3 @@ tools_description = {
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-tools_desc = [
-    {
-        "type": "function",
-        "function": {
-            "name": "close_light",
-            "description": "关掉机箱的灯。",
-            "parameters":{
-                "type": "object",
-                "properties":{
-                },
-                "required": []
-            }
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "open_light",
-            "description": "打开机箱的灯。",
-            "parameters":{
-                "type": "object",
-                "properties":{
-                },
-                "required": []
-            }
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "run_software",
-            "description": "根据给出的名称去运行指定的程序软件或者脚本等可执行的。",
-            "parameters":{
-                "type": "object",
-                "properties":{
-                    "software_name":{
-                        "type": "string",
-                        "enum": [],
-                        "description": "需要运行或者执行的软件程序或者脚本的名称"
-                    }
-                },
-                "required": ["software_name"]
-            }
-        }
-    }
-]
