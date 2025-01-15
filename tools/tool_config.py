@@ -18,8 +18,11 @@ def generate_name_path_map(folder_paths, exclude_name, exclude_path):
                     if flg:
                         flg = not any(key in filepath or key in dirnames for key in exclude_path.split(','))
                     if flg:
+                        name = name.lower()
                         pgo[name] = os.path.join(filepath, filename)
     return pgo
+
+StatMenuSoftware = generate_name_path_map(folder_paths=tools_variable['RunSoftware']['Paths'], exclude_name=tools_variable['RunSoftware']['Exclude']['Name'], exclude_path=tools_variable['RunSoftware']['Exclude']['Path'])
 
 def generate_tools_desc():
     tools_desc = []
@@ -74,8 +77,8 @@ tools_description = {
             "software_name":{
                 "type": "string",
                 "required": True,
-                "enum": list(generate_name_path_map(folder_paths=tools_variable['RunSoftware']['Paths'], exclude_name=tools_variable['RunSoftware']['Exclude']['Name'], exclude_path=tools_variable['RunSoftware']['Exclude']['Path']).keys()),
-                "description": "需要打开、运行或者执行的软件程序或者脚本的名称"
+                "enum": list(StatMenuSoftware.keys()),
+                "description": "需要打开或者运行的程序的简称或者别称，从enum中选择最相符的传入需要打开、运行或者执行的软件程序或者脚本的名称"
             }
         }
     }
