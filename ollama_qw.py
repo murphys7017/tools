@@ -20,7 +20,7 @@ class OllamaQW():
         self.messages.append(response["message"])
         logger.info(f"model response is: {response}")
         return response
-
+    
 
     def chat(self, msg):
         self.messages.append({'role': 'user', 'content': msg})
