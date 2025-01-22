@@ -3,13 +3,58 @@ from tools import tool_config
 import ollama
 class OllamaQW():
 
-    def __init__(self, model_name: str='qwen2.5:3b'):
+    def __init__(self, model_name: str='qwen2.5:7b-instruct-q2_K'):
+        self.bot_name = 'Alice'
+        self.user_name = 'Yakumo Aki'
         self.model_name = model_name
+        self.fixed_replay_path = r'data/fixed_replay.xlsx'
+        self.fixed_replay = {}
         self.tools = tool_config.generate_tools_desc()
         self.base_message = [
-            {"role": "system", "content": "你是Alice,是YakumoAki在设计的智能语音助手"}]
+            {"role": "system", "content": f"你是{self.bot_name},是{self.user_name}在设计的智能语音助手"}]
         self.messages = []
         logger.info(self.tools)
+        self.load_fixed_replay()
+    
+    def load_fixed_replay(self):
+        import pandas as pd
+        df = pd.read_excel(self.fixed_replay_path)
+        for index,row in df.iterrows():
+            
+            if row['key'] in self.fixed_replay:
+                self.fixed_replay[row['key']].append(row['response'])
+            else:
+                self.fixed_replay[row['key']] = []
+                self.fixed_replay[row['key']].append(row['response'])
+                
+    def get_fixed_replay(self,msg):
+        msg = msg.lower()
+        import difflib
+        if msg in self.fixed_replay.keys():
+            key = msg
+        else:
+            try:
+                key = difflib.get_close_matches(msg.lower(),list(self.fixed_replay.keys()),1, cutoff=0.9)
+                logger.info(key)
+                if len(key) > 0:
+                    key = key[0]
+            except Exception as e:
+                print(e)
+            finally:
+                key = []
+        if len(key) > 0:
+            content = "这个一个系统给出的固定回复，用户已经输入了，你需要从下面列出来的几个中选一个回复用户，不要调用其他工具："
+            count = 1
+            for line in self.fixed_replay[key]:
+                line = line.replace('{name}', self.user_name).replace('{me}', self.bot_name)
+                content = content + f"\n {line}"
+                count += 1
+            return {
+                        "role": "system",
+                        "content": content
+                    }
+        else:
+            return None
     
     def ollama_chat(self):
         response = ollama.chat(
@@ -25,8 +70,14 @@ class OllamaQW():
     def chat(self, msg):
         self.messages.append({'role': 'user', 'content': msg})
         logger.info(f"input message: {self.messages[-1]}")
+        
+        if fixed_reply_message:= self.get_fixed_replay(msg):
+            self.messages.append(fixed_reply_message)
+            logger.info(f"fixed reply message: {self.messages[-1]}")
+            
         self.ollama_chat()
         
+        # 工具调用
         if tool_calls := self.messages[-1].get("tool_calls", None):
             for tool_call in tool_calls:
                 if fn_call := tool_call.get("function"):

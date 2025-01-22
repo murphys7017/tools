@@ -83,43 +83,43 @@ class CLIWindow(QMainWindow):
 
     def keyPressEvent(self, event):
         """处理回车事件"""
-        if event.key() == Qt.Key_Return:  # 按下回车键
-            edit_line = self.lines[len(self.text_lines)].text()
-            self.line_history.append(edit_line)  # 记录用户输入
-            self.line_history.append("...") 
-            self.text_lines = self.line_history[-6:] 
-            user_input = edit_line.split(self.split_char)[-1].strip()  # 获取用户输入
-            # 获取当前输入的文本
-            logger.info(f"User input: {user_input}")
-            logger.info(f"history length: {len(self.line_history)}")
-            if user_input.lower() == "exit":  # 输入 "exit" 退出程序
-                self.close()
-                return
-            
-            if len(self.line_history) > 7 : 
-                for line, text in zip(self.lines, self.text_lines):
-                    line.setText(text)  # 更新文本行
-                self.lines[6].setReadOnly(False)  # 文本可编辑
-                # self.lines[6].setPlaceholderText()  # 显示输入提示符
-                self.lines[6].setText(self.placeholder_text)  # >文本
-                self.lines[6].setFocus()
-                self.lines[6].setCursorPosition(len(self.placeholder_text))
-            else:
-                for line, text in zip(self.lines, self.text_lines):
-                    line.setText(text)  # 更新文本行
-                self.lines[len(self.text_lines)].setReadOnly(False)  # 文本可编辑
-                # self.lines[len(self.text_lines)].setPlaceholderText("> ")  # 显示输入提示符
-                self.lines[len(self.text_lines)].setText(self.placeholder_text)  # >文本
-                self.lines[len(self.text_lines)].setFocus()
-                self.lines[len(self.text_lines)].setCursorPosition(len(self.placeholder_text))
+        if event.key() != Qt.Key_Return: 
+            return
+        edit_line = self.lines[len(self.text_lines)].text()
+        self.line_history.append(edit_line)  # 记录用户输入
+        self.line_history.append("...") 
+        self.text_lines = self.line_history[-6:] 
+        user_input = edit_line.split(self.split_char)[-1].strip()  # 获取用户输入
+        # 获取当前输入的文本
+        logger.info(f"User input: {user_input}")
+        if user_input.lower() == "exit":  # 输入 "exit" 退出程序
+            self.close()
+            return
+        
+        if len(self.line_history) > 7 : 
+            for line, text in zip(self.lines, self.text_lines):
+                line.setText(text)  # 更新文本行
+            self.lines[6].setReadOnly(False)  # 文本可编辑
+            # self.lines[6].setPlaceholderText()  # 显示输入提示符
+            self.lines[6].setText(self.placeholder_text)  # >文本
+            self.lines[6].setFocus()
+            self.lines[6].setCursorPosition(len(self.placeholder_text))
+        else:
+            for line, text in zip(self.lines, self.text_lines):
+                line.setText(text)  # 更新文本行
+            self.lines[len(self.text_lines)].setReadOnly(False)  # 文本可编辑
+            # self.lines[len(self.text_lines)].setPlaceholderText("> ")  # 显示输入提示符
+            self.lines[len(self.text_lines)].setText(self.placeholder_text)  # >文本
+            self.lines[len(self.text_lines)].setFocus()
+            self.lines[len(self.text_lines)].setCursorPosition(len(self.placeholder_text))
 
-            # # 显示响应
-            response = self.qwen_model.chat(user_input)
-            logger.info(f"Get chat Response: {response}")
-            self.display_response("Alice: " + response['content'])
+        # # 显示响应
+        response = self.qwen_model.chat(user_input)
+        logger.info(f"Get chat Response: {response}")
+        self.display_response("Alice: " + response['content'])
 
-            # # 清空输入框
-            # self.text_display.clear()
+        # # 清空输入框
+        # self.text_display.clear()
     
 
     def display_response(self, response):

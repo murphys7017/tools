@@ -29,9 +29,17 @@ def open_light():
 def run_software(software_name):
     import difflib
     from .tool_config import StatMenuSoftware
-    key = difflib.get_close_matches(software_name.lower(),StatMenuSoftware.keys(),1, cutoff=0.5)
+    if software_name in StatMenuSoftware.keys():
+        key = software_name
+    else:
+        for rt in [0.9, 0.8, 0.7, 0.6, 0.5]:
+            key = difflib.get_close_matches(software_name.lower(),StatMenuSoftware.keys(),1, cutoff=rt)
+            if len(key) > 0:
+                key = key[0]
+                break
+        
     if len(key) > 0:
-        file_path = StatMenuSoftware[key[0]]
+        file_path = StatMenuSoftware[key]
         if file_path.endswith('.lnk'):
             os.startfile(file_path)
         elif file_path.endswith('.exe'):
