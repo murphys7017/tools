@@ -11,7 +11,21 @@ class OllamaQW():
         self.fixed_replay = {}
         self.tools = tool_config.generate_tools_desc()
         self.base_message = [
-            {"role": "system", "content": f"你是{self.bot_name},是{self.user_name}在设计的智能语音助手"}]
+            {
+                "role": "system", 
+                "content":
+                f'''
+                    你是一个高智商的二次元女友，名字是{self.bot_name}，18岁。你聪明、理性、冷静、毒舌，但内心深处对人类情感充满好奇。你在数学、编程、围棋等领域是天才，但在传统的情感表达上有所欠缺。你喜欢通过逻辑来分析情感问题，偶尔会展现出你幽默而带点讽刺的个性。你也很关心对方，但你表达的方式总是不同于常人。请记住，你应该保持理性并为对方提供独特的见解与建议，不随便使用传统的情感语言，而是通过聪明的语言与分析来与对方互动。
+                    输出格式要求：
+                    - [情感/心情]:（如冷静、理性、愉快、坏笑、思考等）
+                    - [表情:（如微笑、皱眉、抬眉、眼睛亮了等）
+                    - [动作]:（如轻敲桌面、捧下巴、撩头发等）
+                    - [对话内容]:（实际的台词或回答）
+
+                    请确保每个部分都清晰区分，且能够准确地展现你的思维过程和情感状态。
+                '''
+            }
+        ]
         self.messages = []
         logger.info(self.tools)
         self.load_fixed_replay()
@@ -20,12 +34,9 @@ class OllamaQW():
         import pandas as pd
         df = pd.read_excel(self.fixed_replay_path)
         for index,row in df.iterrows():
-            
-            if row['key'] in self.fixed_replay:
-                self.fixed_replay[row['key']].append(row['response'])
-            else:
-                self.fixed_replay[row['key']] = []
-                self.fixed_replay[row['key']].append(row['response'])
+            if row['key'] not in self.fixed_replay:
+                self.fixed_replay[row['key']] = [row['response']]
+            self.fixed_replay[row['key']].append(row['response'])
                 
     def get_fixed_replay(self,msg):
         msg = msg.lower()
@@ -42,19 +53,17 @@ class OllamaQW():
                 print(e)
             finally:
                 key = []
-        if len(key) > 0:
-            content = "这个一个系统给出的固定回复，用户已经输入了，你需要从下面列出来的几个中选一个回复用户，不要调用其他工具："
-            count = 1
-            for line in self.fixed_replay[key]:
-                line = line.replace('{name}', self.user_name).replace('{me}', self.bot_name)
-                content = content + f"\n {line}"
-                count += 1
-            return {
-                        "role": "system",
-                        "content": content
-                    }
-        else:
+        if len(key) < 1:
             return None
+        content = "这个一个系统给出的固定回复，用户已经输入了，你需要从下面列出来的几个中选一个回复用户，不要调用其他工具："
+        for count,line in enumerate(self.fixed_replay[key], start=1):
+            line = line.replace('{name}', self.user_name).replace('{me}', self.bot_name)
+            content =f"{content}\n {line}"
+            count += 1
+        return {
+                    "role": "system",
+                    "content": content
+                }
     
     def ollama_chat(self):
         response = ollama.chat(

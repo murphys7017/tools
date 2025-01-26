@@ -2,27 +2,10 @@ import yaml
 import os
 import importlib
 import json
-    
-with open('Config.yml', 'r', encoding='utf-8') as file:
-    config = yaml.load(file, Loader=yaml.FullLoader)
-tools_variable = config['ToolsSet']
+import tools
+from loguru import logger
 
-def generate_name_path_map(folder_paths, exclude_name, exclude_path):
-    pgo = {}
-    for folder_path in folder_paths:
-        for filepath,dirnames,filenames in os.walk(folder_path):
-            for filename in filenames:
-                if filename.endswith('.lnk') or filename.endswith('.exe'):
-                    name = filename.split('.')[0]
-                    flg = not any(key in name or key == name for key in exclude_name.split(','))
-                    if flg:
-                        flg = not any(key in filepath or key in dirnames for key in exclude_path.split(','))
-                    if flg:
-                        name = name.lower()
-                        pgo[name] = os.path.join(filepath, filename)
-    return pgo
-
-StatMenuSoftware = generate_name_path_map(folder_paths=tools_variable['RunSoftware']['Paths'], exclude_name=tools_variable['RunSoftware']['Exclude']['Name'], exclude_path=tools_variable['RunSoftware']['Exclude']['Path'])
+from function_tools import tool_list
 
 def generate_tools_desc():
     tools_desc = []
@@ -55,7 +38,7 @@ def generate_tools_desc():
     return tools_desc
 
 
-module_name = 'tools.tool_list'
+module_name = 'function_tools.tool_list'
 module = importlib.import_module(module_name)
 def get_tool_res(fn_name,fn_args):
     my_function = getattr(module, fn_name)
@@ -77,7 +60,7 @@ tools_description = {
             "software_name":{
                 "type": "string",
                 "required": True,
-                "enum": list(StatMenuSoftware.keys()),
+                "enum": list(tool_list.StatMenuSoftware.keys()),
                 "description": "需要打开或者运行的程序的简称或者别称，从enum中选择最相符的传入需要打开、运行或者执行的软件程序或者脚本的名称"
             }
         }
