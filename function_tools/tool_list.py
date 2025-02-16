@@ -66,12 +66,10 @@ logger.info("程序列表向量化完成")
 
 def run_software(software_name):
     import difflib
-    from .tool_config import StatMenuSoftware
     
     
     if software_name in StatMenuSoftware.keys():
-        
-        key = software_name
+        file_path = StatMenuSoftware[software_name]
         if file_path.endswith('.lnk'):
                 os.startfile(file_path)
         elif file_path.endswith('.exe'):

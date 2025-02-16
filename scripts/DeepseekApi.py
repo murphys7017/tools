@@ -1,15 +1,21 @@
 from loguru import logger
+import requests
 from function_tools import tool_config
-import ollama
 import yaml
+import ast
 import tools
+import json
+class DeepSeekOnline():
 
-class OllamaQW():
-
-    def __init__(self, model_name: str='qwen2.5:7b'):
+    def __init__(self, model_name: str='deepseek-chat'):
         self.bot_name = 'Alice'
         self.user_name = 'Yakumo Aki'
         self.model_name = model_name
+        self.url = "https://api.deepseek.com/chat/completions"
+        self.headers = {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer sk-32f06997a5c04ba39f6553368f55458e"
+        }
         logger.info(f"服务开始初始化，用户名：{self.bot_name}，大模型名称{self.user_name}，大模型版本{self.model_name}")
         
         self.role_setting = f'''
@@ -53,76 +59,73 @@ class OllamaQW():
                 '''
         logger.info(f"固定回复加载完成，开始向量化，len：{ len(self.fixed_replay)}")
         # 将固定回复向量化
-        self.response_vectors = [tools.get_vector(response) for response in self.fixed_replay.keys()]
+        self.response_vectors = [
+            tools.get_vector(response) for response in self.fixed_replay
+            ]
         logger.info("固定回复向量化完成。")
     
+    def request_chat(self,model: str,messages: list[object],temperature=1.3,tools=None):
+        data = {
+            "model": model,  # 指定使用 R1 模型（deepseek-reasoner）或者 V3 模型（deepseek-chat）
+            "messages": messages,
+            "temperature": temperature,
+            "stream": False  # 关闭流式传输
+        }
+        if tools:
+            data['tools'] = tools
+            data["tool_choice"] = 'required'
 
-    def load_fixed_replay(self):
-        import pandas as pd
-        df = pd.read_excel(self.fixed_replay_path)
-        for index,row in df.iterrows():
-            if row['key'] not in self.fixed_replay:
-                self.fixed_replay[row['key']] = [row['response']]
-            self.fixed_replay[row['key']].append(row['response'])
-                
-    def get_fixed_replay(self,msg):
-        msg = msg.lower()
-        import difflib
-        if msg in self.fixed_replay.keys():
-            key = msg
+        response = requests.post(self.url, headers=self.headers, json=data)
+
+        if response.status_code == 200:
+            result = response.json()
+            logger.info(result['choices'][0])
+            return result['choices'][0]['message']
         else:
-            try:
-                key = difflib.get_close_matches(msg.lower(),list(self.fixed_replay.keys()),1, cutoff=0.9)
-                logger.info(key)
-                if len(key) > 0:
-                    key = key[0]
-            except Exception as e:
-                print(e)
-            finally:
-                key = []
-        if len(key) < 1:
+            print("请求失败，错误码：", response.status_code)
             return None
-        content = "这个一个系统给出的固定回复，用户已经输入了，你需要从下面列出来的几个中选一个回复用户，不要调用其他工具："
-        for count,line in enumerate(self.fixed_replay[key], start=1):
-            line = line.replace('{name}', self.user_name).replace('{me}', self.bot_name)
-            content =f"{content}\n {line}"
-            count += 1
-        return {
-                    "role": "system",
-                    "content": content
-                }
     
-    def ollama_chat(self):
+    def model_chat(self):
         # TODO: checl tool call
-        response = ollama.chat(
-            model=self.model_name,
+        response = self.request_chat(
+            model='deepseek-chat',
             messages=self.messages[-1:],
             tools=self.tools
             )
-        logger.info(f"Tool call response {response.tool_calls}")
+        logger.info(f"Tool call response {response}")
         logger.info(f"Tool call response {response.get('tool_calls', None)}")
         if tool_calls := response.get("tool_calls", None):
             logger.info(f"激活工具:{tool_calls}")
+            tool_call_id = tool_calls[0]['id']
             for tool_call in tool_calls:
                 if fn_call := tool_call.get("function"):
+                    
                     fn_name: str = fn_call["name"]
                     fn_args: dict = fn_call["arguments"]
+                    if isinstance(fn_args,str):
+                        try:
+                            fn_args = ast.literal_eval(fn_args)
+                        except Exception as e:
+                            logger.info(e)
+                            fn_args = {}
                     logger.info(f"function name: {fn_name}")
                     logger.info(f"function args: {fn_args}")
                     fn_res = tool_config.get_tool_res(fn_name, fn_args)
-
+                    fn_res = json.loads(fn_res)
+                    self.messages.append(response)
                     self.messages.append({
                             "role": "tool",
-                            "name": fn_name,
-                            "content": fn_res,
+                            "tool_call_id": tool_call_id,
+                            "content": fn_res['message'],
                     })
                     logger.info(f"tool response is: {self.messages[-1]}")
-                        
-        response = ollama.chat(
+        
+        response = self.request_chat(
                 model=self.model_name,
                 messages=self.base_message + self.messages[-20:]
             )
-        self.messages.append(response["message"])
+        if response:
+            self.messages.append(response)
         logger.info(f"model response is: {response}")
         return response
     
@@ -130,16 +133,16 @@ class OllamaQW():
     def chat(self, msg):
         self.messages.append({'role': 'user', 'content': msg})
         logger.info(f"input message: {self.messages}")
-        
         if fixed_reply_message:= tools.get_best_match_response(msg,self.response_vectors,self.fixed_replay.values()):
             self.messages.append({
                             "role": "system",
                             "content": fixed_reply_message,
                         })
+            return fixed_reply_message
         else:
-            self.ollama_chat()
-
-        return self.messages[-1]
+            if self.model_chat():
+                res = self.messages[-1]['content']
+                return res.split('\n')
     
     
     def parse_tool_description(self,tool_info):

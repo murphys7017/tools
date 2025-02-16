@@ -49,19 +49,19 @@ def get_tool_res(fn_name,fn_args):
 
 tools_description = {
     'close_light' :{
-        "description": "关掉机箱的灯。",
+        "description": "帮用户关掉机箱的灯。",
     },
     'open_light' :{
-        "description": "打开机箱的灯。",
+        "description": "帮用户打开机箱的灯。",
     },    
     'run_software':{
-        "description": "打开或者运行程序、软件、应用、脚本等。",
+        "description": "用于根据用户指令打开或运行指定的软件、应用、程序或脚本。适用于启动本地安装的软件，例如浏览器、文本编辑器、终端、开发工具等。",
         "parameters":{
             "software_name":{
                 "type": "string",
                 "required": True,
                 "enum": list(tool_list.StatMenuSoftware.keys()),
-                "description": "需要打开或者运行的程序的简称或者别称，从enum中选择最相符的传入需要打开、运行或者执行的软件程序或者脚本的名称"
+                "description": "待启动的软件名称，请从 enum 列表中选择最匹配的软件简称或别称。例如：'edge' 代表 Microsoft Edge，'vscode' 代表 Visual Studio Code。"
             }
         }
     }

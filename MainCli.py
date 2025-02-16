@@ -1,29 +1,35 @@
+import os
 import sys
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QApplication, QMainWindow,QLineEdit, QVBoxLayout, QWidget
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QShortcut
+from ScriptsManagement import ScriptManager
 from ollama_qw import OllamaQW
 from loguru import logger
+
+
 
 class CLIWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         
         self.user_name = 'Yakumo Aki'
+        self.bot_name = 'Alice'
+        
+        
+        self.scriptManager = ScriptManager(os.path.join('scripts'))
+        
         self.split_char = '>'
         self.placeholder_text = f"{self.user_name} {self.split_char} "
         
-        self.setWindowTitle("Alice的小窗")
+        self.setWindowTitle(f"{self.bot_name}的小窗")
         self.setGeometry(10, 800, 800, 200)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)  # 设置无边框并且始终置顶
         self.setAttribute(Qt.WA_TranslucentBackground)  # 设置透明背景
         self.setStyleSheet("background-color: transparent;")  # 设置背景透明
-
-        # 初始化 Ollama 模型
-        self.qwen_model = OllamaQW()
-
+        
         self.lines = []
         
         for _ in range(7):
@@ -44,7 +50,7 @@ class CLIWindow(QMainWindow):
 
         
         # 初始化显示文本
-        self.line_history = ["Alice: 欢迎回来，Yakumo"]
+        self.line_history = [f"{self.bot_name}: 欢迎回来，{self.user_name}"]
         self.text_lines = self.line_history[-6:] 
         for line, text in zip(self.lines, self.text_lines):
             line.setText(text)  # 更新文本行
@@ -114,9 +120,10 @@ class CLIWindow(QMainWindow):
             self.lines[len(self.text_lines)].setCursorPosition(len(self.placeholder_text))
 
         # # 显示响应
-        response = self.qwen_model.chat(user_input)
-        logger.info(f"Get chat Response: {response}")
-        self.display_response("Alice: " + response['content'])
+        if responses := self.scriptManager.message_handler(user_input):
+            for response in responses:
+                logger.info(f"Get chat Response: {response}")
+                self.display_response(f"{self.bot_name}: {response}")
 
         # # 清空输入框
         # self.text_display.clear()
