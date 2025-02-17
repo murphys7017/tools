@@ -5,10 +5,10 @@ import importlib
 import json
 import tools
 from loguru import logger
-
+import asyncio
 from Config import GlobalVarManager
-tools_variable = GlobalVarManager.get('ToolsSet')
 
+tools_variable = GlobalVarManager.get('ToolsSet')
 
 def generate_tools_desc():
     tools_desc = []
@@ -60,6 +60,8 @@ def generate_name_path_map(folder_paths, exclude_name, exclude_path):
 
 logger.info("开始加载程序列表")
 StatMenuSoftware = generate_name_path_map(folder_paths=tools_variable['RunSoftware']['Paths'], exclude_name=tools_variable['RunSoftware']['Exclude']['Name'], exclude_path=tools_variable['RunSoftware']['Exclude']['Path'])
+
+
 GlobalVarManager.set('StatMenuSoftware',StatMenuSoftware)
 # 将固定回复向量化
 logger.info("程序列表加载完成，开始向量化")

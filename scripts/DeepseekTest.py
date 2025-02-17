@@ -1,12 +1,14 @@
 from loguru import logger
-from DeepseekApi import DeepSeekOnline
+from scripts.DeepseekApi import DeepSeekOnline
 from BaseScript import BaseScript
+from PluginBase import PluginBase
 
-class DeepseekTest(BaseScript):
+class DeepseekTest(PluginBase):
     """所有脚本的抽象基类"""
 
     def __init__(self, script_name='test', author='xx', need_thread=False , is_multi=False):
         """初始化方法，必须调用 super"""
+        super().__init__(script_name,author,category='message')
         self.script_name = script_name
         self.author = author
         self.need_thread = need_thread

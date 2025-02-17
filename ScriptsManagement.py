@@ -8,7 +8,7 @@ import os
 import time
 from loguru import logger
 from BaseScript import BaseScript
-
+from PluginBase import PluginBase
 
 class ScriptChangeHandler(FileSystemEventHandler):
     """处理脚本目录变化的事件处理器"""
@@ -53,6 +53,12 @@ class ScriptManager:
 
     def __init__(self, scripts_directory):
         self.SCRIPTS_REGISTY = {}
+        
+        self.plugin_routers = {
+            'message': {},
+            'command': {},
+            'event': {}
+        }
         self.scripts_directory = scripts_directory
         sys.path.append(scripts_directory)
 
@@ -61,8 +67,8 @@ class ScriptManager:
         self.event_handler = ScriptChangeHandler(self)
         self.observer.schedule(self.event_handler, path=scripts_directory, recursive=False)
         self.observer.start()
-
-
+        
+        
         """遍历文件夹下的所有文件"""
         for root, dirs, files in os.walk(scripts_directory):
             for file in files:
@@ -74,11 +80,12 @@ class ScriptManager:
     
     def load_script(self, file_path):
         """动态加载并注册Python文件"""
-        logger.info('Loading Scripts')
+        logger.info(f'Loading Scripts:{file_path}')
         script_name = os.path.splitext(os.path.basename(file_path))[0]
+        logger.info(f'Loading Scripts:{script_name}')
         importlib.invalidate_caches()
         if script_name in self.SCRIPTS_REGISTY:
-            del self.SCRIPTS_REGISTY[script_name]
+            self.unload_script(script_name)
 
         try:
             # 构造模块的完整路径
@@ -90,12 +97,30 @@ class ScriptManager:
             # 查找继承自 ScriptBase 的类
             script_class = None
             for name, obj in inspect.getmembers(module):
-                if inspect.isclass(obj) and issubclass(obj, BaseScript) and obj is not BaseScript:
+                if inspect.isclass(obj) and issubclass(obj, PluginBase) and obj is not PluginBase:
                     script_class = obj
                     break
             
             if script_class:
-                self.SCRIPTS_REGISTY[script_name] = script_class()
+                plugin = script_class()
+                self.SCRIPTS_REGISTY[script_name] = plugin
+                
+                if plugin.category == 'event':
+                    if plugin.route in self.plugin_routers['event']:
+                        self.plugin_routers['event'][plugin.route].append(plugin)
+                    else: 
+                        self.plugin_routers['event'][plugin.route] = [plugin]
+                elif plugin.category == 'command':
+                    if plugin.route in self.plugin_routers['command']:
+                        self.plugin_routers['command'][plugin.route].append(plugin)
+                    else: 
+                        self.plugin_routers['command'][plugin.route] = [plugin]
+                elif plugin.category == 'message':
+                    if plugin.route in self.plugin_routers['message']:
+                        self.plugin_routers['message'][plugin.route].append(plugin)
+                    else: 
+                        self.plugin_routers['message'][plugin.route] = [plugin]
+                
                 logger.info('Loaded Script {script_name}',script_name=script_name,)
             else:
                 logger.info(f"No valid ScriptBase implementation found in {script_name}")
@@ -118,10 +143,16 @@ class ScriptManager:
             logger.info(f"Module {script_name} is not loaded.")
     def unload_script(self, script_name):
         """卸载脚本"""
+        
         if script_name in self.SCRIPTS_REGISTY:
+            plugin = self.SCRIPTS_REGISTY[script_name]
+            self.plugin_routers[plugin.category][plugin.route].remove(plugin)
+            if len(self.plugin_routers[plugin.category][plugin.route]) < 1:
+                del self.plugin_routers[plugin.category][plugin.route]
             # 从脚本注册表中删除
             importlib.invalidate_caches()
             del self.SCRIPTS_REGISTY[script_name]
+            
             logger.info(f"Unloaded script: {script_name}")
 
             # 检查并从 sys.modules 中移除
@@ -138,31 +169,59 @@ class ScriptManager:
         self.observer.join()
 
 
-    def message_handler(self, message):
-        # 使用生成器表达式快速找到第一个符合条件的脚本
-        for script in self.SCRIPTS_REGISTY.values():
-            logger.info(script.check_message(message))
-            if script.check_message(message):
-                logger.info(f'Activate Script: {script.__class__.__name__}')
-                response = script.handle(message)
-                logger.info(f'Activate Script response: {response}')
-                
-                return response if isinstance(response, list) else [response]
-        # if script := next(
-        #     (
-        #         script
-        #         for script in self.SCRIPTS_REGISTY.values()
-        #         if script['script_instance'].check_message(message)
-        #     ),
-        #     None,
-        # ):
 
-        #     response = script['script_instance'].handle(message)
-        #     logger.info(f'Activate Script: {script.__class__.__name__}')
-        #     logger.info(f'Activate Script response: {response}')
-            
-        #     return response if isinstance(response, list) else [response]
+    def _extracted_from_message_handler(self, plugin, message):
+        logger.info(f'Activate Script: {plugin.__class__.__name__}')
+        response = plugin.handle(message)
+        logger.info(f'Activate Script response: {response}')
+        return response if isinstance(response, list) else [response]
+    
+    def message_handler(self, message):
+        """_summary_
+
+        Args:
+            message (dict): { 'category': 'message'|'command'|'event' , 'content': 'xxx' }
+
+        Returns:
+            _type_: _description_
+        """
+        category = message['category']
+        content = message['content']
+        
+        routers = self.plugin_routers[category]
+        for key in routers:
+            if key.startswith('startswith:'):
+                if content.startswith(key.split('startswith:')[1]):
+                    for plugin in routers[key]:
+                        if plugin.check_message(content):
+                            return self._extracted_from_message_handler(plugin,content)
+            elif key.startswith('endswith:'):
+                if content.startswith(key.split('endswith:')[1]):
+                    for plugin in routers[key]:
+                        if plugin.check_message(content):
+                            return self._extracted_from_message_handler(plugin,content)
+
+            elif key.startswith('containswith:'):
+                if content.startswith(key.split('containswith:')[1]):
+                    for plugin in routers[key]:
+                        if plugin.check_message(content):
+                            return self._extracted_from_message_handler(plugin,content)
+            elif key == '*':
+                for plugin in routers[key]:
+                    if plugin.check_message(content):
+                        return self._extracted_from_message_handler(plugin,content)
+                
+        # 使用生成器表达式快速找到第一个符合条件的脚本
+        # for script in self.SCRIPTS_REGISTY.values():
+        #     logger.info(script.check_message(message))
+        #     if script.check_message(message):
+        #         logger.info(f'Activate Script: {script.__class__.__name__}')
+        #         response = script.handle(message)
+        #         logger.info(f'Activate Script response: {response}')
+                
+        #         return response if isinstance(response, list) else [response]
 
 if __name__ == "__main__":
+
     st =  ScriptManager(os.path.join('scripts'))
-    st.message_handler('帮我打开cpuz')
+    st.message_handler({'category':'message','content':'你好啊'})
