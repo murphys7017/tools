@@ -1,5 +1,5 @@
 from loguru import logger
-from function_tools import tool_config
+from function_tools import tool_list
 import ollama
 import yaml
 import tools
@@ -34,7 +34,7 @@ class OllamaQW():
         self.messages = []
         
         logger.info("指定应用读取完成：")
-        self.tools = tool_config.generate_tools_desc()
+        self.tools = tool_list.generate_tools_desc()
         logger.info(self.tools)
         
         # 加载固定回复
@@ -109,7 +109,7 @@ class OllamaQW():
                     fn_args: dict = fn_call["arguments"]
                     logger.info(f"function name: {fn_name}")
                     logger.info(f"function args: {fn_args}")
-                    fn_res = tool_config.get_tool_res(fn_name, fn_args)
+                    fn_res = tool_list.get_tool_res(fn_name, fn_args)
 
                     self.messages.append({
                             "role": "tool",
@@ -197,7 +197,7 @@ class OllamaQW():
         dialog_list = [
             {"role": "system", "content": "你是Alice,是YakumoAki在设计的智能语音助手"},
         ]
-        tool_info = tool_config.generate_tools_desc()
+        tool_info = tool_list.generate_tools_desc()
         # 生成完整 prompt
         prompt = generate_prompt_with_tools(dialog_list, tool_info)
         print(prompt)

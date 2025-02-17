@@ -5,18 +5,18 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QApplication, QMainWindow,QLineEdit, QVBoxLayout, QWidget
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QShortcut
+from Config import GlobalVarManager
 from ScriptsManagement import ScriptManager
-from ollama_qw import OllamaQW
 from loguru import logger
-
+import Config
 
 
 class CLIWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         
-        self.user_name = 'Yakumo Aki'
-        self.bot_name = 'Alice'
+        self.user_name = GlobalVarManager.get('UserName')
+        self.bot_name = GlobalVarManager.get('BotName')
         
         
         self.scriptManager = ScriptManager(os.path.join('scripts'))

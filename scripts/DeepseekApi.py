@@ -1,20 +1,23 @@
 from loguru import logger
 import requests
-from function_tools import tool_config
 import yaml
 import ast
 import tools
 import json
+
+from Config import GlobalVarManager
+from function_tools import tool_list
+
 class DeepSeekOnline():
 
-    def __init__(self, model_name: str='deepseek-chat'):
-        self.bot_name = 'Alice'
-        self.user_name = 'Yakumo Aki'
-        self.model_name = model_name
+    def __init__(self):
+        self.bot_name = GlobalVarManager.get('BotName')
+        self.user_name = GlobalVarManager.get('UserName')
+        self.model_name = GlobalVarManager.get('ModelName')
         self.url = "https://api.deepseek.com/chat/completions"
         self.headers = {
             "Content-Type": "application/json",
-            "Authorization": "Bearer sk-32f06997a5c04ba39f6553368f55458e"
+            "Authorization": f"Bearer {GlobalVarManager.get('DeepSeekApiKey')}"
         }
         logger.info(f"服务开始初始化，用户名：{self.bot_name}，大模型名称{self.user_name}，大模型版本{self.model_name}")
         
@@ -40,7 +43,7 @@ class DeepSeekOnline():
         self.messages = []
         
         logger.info("指定应用读取完成：")
-        self.tools = tool_config.generate_tools_desc()
+        self.tools = tool_list.generate_tools_desc()
         logger.info(self.tools)
         
         # 加载固定回复
@@ -110,7 +113,7 @@ class DeepSeekOnline():
                             fn_args = {}
                     logger.info(f"function name: {fn_name}")
                     logger.info(f"function args: {fn_args}")
-                    fn_res = tool_config.get_tool_res(fn_name, fn_args)
+                    fn_res = tool_list.get_tool_res(fn_name, fn_args)
                     fn_res = json.loads(fn_res)
                     self.messages.append(response)
                     self.messages.append({
@@ -200,7 +203,7 @@ class DeepSeekOnline():
         dialog_list = [
             {"role": "system", "content": "你是Alice,是YakumoAki在设计的智能语音助手"},
         ]
-        tool_info = tool_config.generate_tools_desc()
+        tool_info = tool_list.generate_tools_desc()
         # 生成完整 prompt
         prompt = generate_prompt_with_tools(dialog_list, tool_info)
         print(prompt)

@@ -1,4 +1,7 @@
-ModelName: qwen2.5:3b
+ModelName: deepseek-chat
+BotName: Alice
+UserName: Yakumo Aki
+DeepSeekApiKey: sk-32f06997a5c04ba39f6553368f55458e
 ToolsSet: 
   RunSoftware: 
     Paths:
