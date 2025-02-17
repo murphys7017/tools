@@ -89,39 +89,39 @@ class DeepSeekOnline():
             return None
     
     def model_chat(self):
-        # TODO: checl tool call
-        response = self.request_chat(
-            model='deepseek-chat',
-            messages=self.messages[-1:],
-            tools=self.tools
-            )
-        logger.info(f"Tool call response {response}")
-        logger.info(f"Tool call response {response.get('tool_calls', None)}")
-        if tool_calls := response.get("tool_calls", None):
-            logger.info(f"激活工具:{tool_calls}")
-            tool_call_id = tool_calls[0]['id']
-            for tool_call in tool_calls:
-                if fn_call := tool_call.get("function"):
+        # TODO: 更改工具调用，对大模型编写偏自然语言处理的一些 一部分转命令
+        # response = self.request_chat(
+        #     model='deepseek-chat',
+        #     messages=self.messages[-1:],
+        #     tools=self.tools
+        #     )
+        # logger.info(f"Tool call response {response}")
+        # logger.info(f"Tool call response {response.get('tool_calls', None)}")
+        # if tool_calls := response.get("tool_calls", None):
+        #     logger.info(f"激活工具:{tool_calls}")
+        #     tool_call_id = tool_calls[0]['id']
+        #     for tool_call in tool_calls:
+        #         if fn_call := tool_call.get("function"):
                     
-                    fn_name: str = fn_call["name"]
-                    fn_args: dict = fn_call["arguments"]
-                    if isinstance(fn_args,str):
-                        try:
-                            fn_args = ast.literal_eval(fn_args)
-                        except Exception as e:
-                            logger.info(e)
-                            fn_args = {}
-                    logger.info(f"function name: {fn_name}")
-                    logger.info(f"function args: {fn_args}")
-                    fn_res = tool_list.get_tool_res(fn_name, fn_args)
-                    fn_res = json.loads(fn_res)
-                    self.messages.append(response)
-                    self.messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_call_id,
-                            "content": fn_res['message'],
-                    })
-                    logger.info(f"tool response is: {self.messages[-1]}")
+        #             fn_name: str = fn_call["name"]
+        #             fn_args: dict = fn_call["arguments"]
+        #             if isinstance(fn_args,str):
+        #                 try:
+        #                     fn_args = ast.literal_eval(fn_args)
+        #                 except Exception as e:
+        #                     logger.info(e)
+        #                     fn_args = {}
+        #             logger.info(f"function name: {fn_name}")
+        #             logger.info(f"function args: {fn_args}")
+        #             fn_res = tool_list.get_tool_res(fn_name, fn_args)
+        #             fn_res = json.loads(fn_res)
+        #             self.messages.append(response)
+        #             self.messages.append({
+        #                     "role": "tool",
+        #                     "tool_call_id": tool_call_id,
+        #                     "content": fn_res['message'],
+        #             })
+        #             logger.info(f"tool response is: {self.messages[-1]}")
         
         response = self.request_chat(
                 model=self.model_name,

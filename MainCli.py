@@ -120,10 +120,11 @@ class CLIWindow(QMainWindow):
             self.lines[len(self.text_lines)].setCursorPosition(len(self.placeholder_text))
 
         # # 显示响应
-        if responses := self.scriptManager.message_handler(user_input):
+        if responses := self.scriptManager.message_handler({'category':'message','content':user_input}):
             for response in responses:
                 logger.info(f"Get chat Response: {response}")
-                self.display_response(f"{self.bot_name}: {response}")
+                if '对话内容' in response:
+                    self.display_response(f"{self.bot_name}: {response}")
 
         # # 清空输入框
         # self.text_display.clear()
