@@ -2,13 +2,17 @@ from abc import ABC, abstractmethod
 class PluginBase(ABC):
     """所有脚本的抽象基类"""
 
-    def __init__(self, 
-                 script_name: str, 
-                 author: str,
-                 category: str, 
-                 route: str = '*',
-                 priority: int=10,
-                 need_thread=False):
+    def __init__(
+        self, 
+        script_name: str, 
+        author: str,
+        category: str, 
+        route: str = '*',
+        priority: int=10,
+        need_thread=False,
+        is_multi=False,
+        multi_round=1
+        ):
         """初始化方法，必须调用 super
             script_name 
             author
@@ -24,8 +28,12 @@ class PluginBase(ABC):
         self.route = route
         self.priority = priority
         self.need_thread = need_thread
-
+        self.is_multi = is_multi
+        self.multi_round = multi_round
         self.thread = None
+        
+        
+        self.multi_round_count = self.multi_round
         
         self._initialized = True  # 标记初始化完成
         if not hasattr(self, "_initialized"):  # 检查子类是否已经初始化

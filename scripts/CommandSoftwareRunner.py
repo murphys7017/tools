@@ -8,7 +8,14 @@ class CommandSoftwareRunner(PluginBase):
 
     def __init__(self, script_name='test1', author='xx', need_thread=False , is_multi=False):
         """初始化方法，必须调用 super"""
-        super().__init__(script_name,author,category='command',route='startswith:/run')
+        super().__init__(
+            script_name,
+            author,
+            category='command',
+            route='startswith:/run',
+            is_multi = True,
+            multi_round = 2
+            )
         self.script_name = script_name
         self.author = author
         self.need_thread = need_thread
@@ -88,16 +95,18 @@ class CommandSoftwareRunner(PluginBase):
         """检查队列消息，判断是否启动脚本，同时移除使用的消息
         """
         logger.info(f"check_message:{message}")
-        if message.startswith('/run '):
-            return True
-        else:
-            return False
+        return bool(message.startswith('/run '))
 
     def handle(self,message):
         """文件处理方法
         处理完成之后调用send_result返回处理结果
         """
-        software_name = message.split('/run ')[1]
+        commands = message.split(' ')
+        # Todo: 结束程序
+        if commands[1] == 'stop':
+            software_name = commands[2]
+            
+        software_name = commands[1]
         res = self.run_software(software_name)
         if res['status'] == 200:
             return 200,[res['message']]
