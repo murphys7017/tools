@@ -41,6 +41,9 @@ class PluginBase(ABC):
     def handle(self,message):
         """文件处理方法
         处理完成之后调用send_result返回处理结果
+        status code: 200 完成, 400 此插件异常 201多步插件，等待下一轮对话
+        return status code,result
         """
         pass
-        # send_result(self, status,userid, data)
+        
+        # return status code,result

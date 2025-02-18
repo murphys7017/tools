@@ -7,7 +7,6 @@ from watchdog.events import FileSystemEventHandler
 import os
 import time
 from loguru import logger
-from BaseScript import BaseScript
 from PluginBase import PluginBase
 
 class ScriptChangeHandler(FileSystemEventHandler):
@@ -57,7 +56,8 @@ class ScriptManager:
         self.plugin_routers = {
             'message': {},
             'command': {},
-            'event': {}
+            'event': {},
+            'multis': []
         }
         self.scripts_directory = scripts_directory
         sys.path.append(scripts_directory)
@@ -172,9 +172,12 @@ class ScriptManager:
 
     def _extracted_from_message_handler(self, plugin, message):
         logger.info(f'Activate Script: {plugin.__class__.__name__}')
-        response = plugin.handle(message)
+        code, response = plugin.handle(message)
         logger.info(f'Activate Script response: {response}')
-        return response if isinstance(response, list) else [response]
+        if code == 200:
+            return response if isinstance(response, list) else [response]
+        elif code == 201:
+            self.plugin_routers['multis'].append(plugin)
     
     def message_handler(self, message):
         """_summary_
@@ -187,6 +190,13 @@ class ScriptManager:
         """
         category = message['category']
         content = message['content']
+        for plugin in self.plugin_routers['multis']:
+            if plugin.next_multi_round():
+                if plugin.check_message(content):
+                    return self._extracted_from_message_handler(plugin,content)
+            else:
+                self.plugin_routers['multis'].remove(plugin)
+
         
         routers = self.plugin_routers[category]
         for key in routers:
@@ -211,15 +221,6 @@ class ScriptManager:
                     if plugin.check_message(content):
                         return self._extracted_from_message_handler(plugin,content)
                 
-        # 使用生成器表达式快速找到第一个符合条件的脚本
-        # for script in self.SCRIPTS_REGISTY.values():
-        #     logger.info(script.check_message(message))
-        #     if script.check_message(message):
-        #         logger.info(f'Activate Script: {script.__class__.__name__}')
-        #         response = script.handle(message)
-        #         logger.info(f'Activate Script response: {response}')
-                
-        #         return response if isinstance(response, list) else [response]
 
 if __name__ == "__main__":
 

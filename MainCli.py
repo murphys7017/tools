@@ -118,13 +118,15 @@ class CLIWindow(QMainWindow):
             self.lines[len(self.text_lines)].setText(self.placeholder_text)  # >文本
             self.lines[len(self.text_lines)].setFocus()
             self.lines[len(self.text_lines)].setCursorPosition(len(self.placeholder_text))
-
+        
+        message = {'category':'message','content':user_input}
+        if user_input.startswith('/'):
+            message['category'] = 'command'
         # # 显示响应
-        if responses := self.scriptManager.message_handler({'category':'message','content':user_input}):
+        if responses := self.scriptManager.message_handler(message):
             for response in responses:
                 logger.info(f"Get chat Response: {response}")
-                if '对话内容' in response:
-                    self.display_response(f"{self.bot_name}: {response}")
+                self.display_response(f"{self.bot_name}: {response}")
 
         # # 清空输入框
         # self.text_display.clear()

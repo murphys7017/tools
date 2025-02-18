@@ -1,7 +1,8 @@
-ModelName: deepseek-chat
 BotName: Alice
 UserName: Yakumo Aki
+DeepseekModelName: deepseek-chat
 DeepSeekApiKey: sk-32f06997a5c04ba39f6553368f55458e
+OllamaDeepSeekModelName: deepseek-r1:14b
 ToolsSet: 
   RunSoftware: 
     Paths:
@@ -10,5 +11,8 @@ ToolsSet:
     Exclude:
       Name: 卸载,Installer, Help,配置工具,Uninstall,Release Notes,FAQ,ReadMe,User’s Guide
       Path: Windows Kits,Git,MySQL Server 8.0,Stardock,Tesseract-OCR,Visual Studio 2022,NVIDIA Corporation,Anaconda3 (64-bit)
+    Alias: 
+      remote desktop connection: rdc
+      钉钉: ding
   CloseLight: '"C:\Users\Administrator\Downloads\OpenRGB_0.9_Windows_64_b5f46e3\OpenRGB Windows 64-bit\OpenRGB.exe" --profile close'
   OpenLight: '"C:\Users\Administrator\Downloads\OpenRGB_0.9_Windows_64_b5f46e3\OpenRGB Windows 64-bit\OpenRGB.exe" --profile nomal'

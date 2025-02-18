@@ -2,7 +2,7 @@ from loguru import logger
 from function_tools import tool_list
 import ollama
 import yaml
-import tools
+import tools.tools as tools
 
 class OllamaQW():
 
