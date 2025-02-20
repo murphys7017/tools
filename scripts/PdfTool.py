@@ -13,7 +13,7 @@ class PdfTool(PluginBase):
         is_multi=False,
         multi_round=1
         ):
-        super().__init__(script_name='pdftool',author='alice',categoryr='command', route='startswith:/pdf')
+        super().__init__(script_name='pdftool',author='alice',category='command', route='startswith:/pdf')
         """初始化方法，必须调用 super
             script_name 
             author
