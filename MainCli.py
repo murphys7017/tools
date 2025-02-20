@@ -1,7 +1,7 @@
 import os
 import sys
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal , QMutex, QMutexLocker, QMetaObject
-from PyQt5.QtGui import QFont, QKeySequence
+from PyQt5.QtGui import QFont, QKeySequence, QTextOption ,QTextCursor
 from PyQt5.QtWidgets import QApplication, QMainWindow,QLineEdit, QVBoxLayout, QWidget ,QShortcut, QTextEdit,QSizePolicy
 
 from Config import GlobalVarManager
@@ -56,7 +56,8 @@ class CLIWindow(QMainWindow):
         self.setStyleSheet("background-color: transparent;")  # 设置背景透明
         
         self.lines = []
-        
+        #background-color: transparent; 
+        #   color: #619B5F; 
         for _ in range(7):
             tempLine = QTextEdit(self)
             tempLine.setStyleSheet("""QTextEdit {
@@ -72,9 +73,11 @@ class CLIWindow(QMainWindow):
             tempLine.setReadOnly(True)  # 文本只读
             tempLine.setContentsMargins(0, 0, 0, 0)
             tempLine.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-            self.lines.insert(0,tempLine)
+            tempLine.setWordWrapMode(QTextOption.WrapAnywhere)
+            tempLine.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            self.lines.insert(0,self.on_text_changed(target_line=0,textExit=tempLine))
 
-        
+        self.on_text_changed(0)
         # 初始化显示文本
         self.line_history = [f"{self.bot_name}: 欢迎回来，{self.user_name}"]
         self.text_lines = self.line_history[-6:] 
@@ -83,7 +86,10 @@ class CLIWindow(QMainWindow):
         self.lines[len(self.line_history)].setReadOnly(False)  # 文本可编辑
         self.lines[len(self.line_history)].setText(self.placeholder_text)  # >文本
         self.lines[len(self.line_history)].setFocus()
-        self.lines[len(self.line_history)].textCursor().setPosition(len(self.placeholder_text))
+        cursor = self.lines[len(self.line_history)].textCursor()
+        cursor.movePosition(QTextCursor.End) # 还可以有别的位置
+        self.lines[len(self.line_history)].setTextCursor(cursor)
+        self.on_text_changed(len(self.line_history))
 
         # 布局设置
         layout = QVBoxLayout()
@@ -118,6 +124,10 @@ class CLIWindow(QMainWindow):
         self.loading_timer.timeout.connect(self.update_loading_text)
         self.dots_count = 0  # 计数，控制文本变化
         
+        
+        # 连接键盘事件信号与槽函数
+        # self.plaintextedit.keyPressEvent = self.handle_keypress
+        
     def on_qq_message(self,response):
         logger.info(f"on_new_message: {response}")
                 
@@ -135,17 +145,27 @@ class CLIWindow(QMainWindow):
         """Ctrl+Q 被按下时触发的操作"""
         if len(self.line_history) > 7 : 
             self.lines[6].setFocus()
-            self.lines[6].textCursor().setPosition(len(self.placeholder_text))
+            cursor = self.lines[len(self.line_history)].textCursor()
+            cursor.movePosition(QTextCursor.End) # 还可以有别的位置
+            self.lines[len(self.line_history)].setTextCursor(cursor)
         else:
 
             self.lines[len(self.text_lines)].setFocus()
-            self.lines[len(self.text_lines)].textCursor().setPosition(len(self.placeholder_text))
+            cursor = self.lines[len(self.line_history)].textCursor()
+            cursor.movePosition(QTextCursor.End) # 还可以有别的位置
+            self.lines[len(self.line_history)].setTextCursor(cursor)
+
 
     def keyPressEvent(self, event):
         """处理回车事件"""
-        if event.key() != Qt.Key_Return: 
-            return
-        edit_line = self.lines[len(self.text_lines)].text()
+        logger.info(event)
+        if event.key() == Qt.Key_Enter:
+            print(111)
+        if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
+            pass
+        else:
+            super().keyPressEvent(event)
+        edit_line = self.lines[len(self.text_lines)].toPlainText()
         user_input = edit_line.split(self.split_char)[-1].strip()  # 获取用户输入
         # 获取当前输入的文本
         logger.info(f"User input: {user_input}")
@@ -190,7 +210,9 @@ class CLIWindow(QMainWindow):
                 # self.lines[6].setPlaceholderText()  # 显示输入提示符
                 self.lines[6].setText(self.placeholder_text)  # >文本
                 self.lines[6].setFocus()
-                self.lines[6].textCursor().setPosition(len(self.placeholder_text))
+                cursor = self.lines[len(self.line_history)].textCursor()
+                cursor.movePosition(QTextCursor.End) # 还可以有别的位置
+                self.lines[len(self.line_history)].setTextCursor(cursor)
             else:
                 for line, text in zip(self.lines, self.text_lines):
                     line.setText(text)  # 更新文本行
@@ -198,17 +220,43 @@ class CLIWindow(QMainWindow):
                 # self.lines[len(self.text_lines)].setPlaceholderText("> ")  # 显示输入提示符
                 self.lines[len(self.text_lines)].setText(self.placeholder_text)  # >文本
                 self.lines[len(self.text_lines)].setFocus()
-                self.lines[len(self.text_lines)].textCursor().setPosition(len(self.placeholder_text))
+                cursor = self.lines[len(self.line_history)].textCursor()
+                cursor.movePosition(QTextCursor.End) # 还可以有别的位置
+                self.lines[len(self.line_history)].setTextCursor(cursor)
             # # 显示响应
             if need_stream_show:
                 self.display_response(message)
+    def on_text_changed(self,target_line,textExit=None):
+            """文本变化时自动调整大小"""
+            if textExit:
+                document = textExit.document()
+            else:
+                document = self.lines[target_line].document()
+            
+            # 获取文档中的总行数
+            block_count = document.blockCount()
 
+            # 计算每行的高度，依据字体大小进行推算
+            line_height = document.documentLayout().blockBoundingRect(document.findBlockByNumber(0)).height()
+
+            # 计算总高度
+            total_height = block_count * line_height + 6
+            
+            # 设置最小和最大高度
+            if textExit:
+                textExit.setMinimumHeight(int(total_height))
+                textExit.setMaximumHeight(int(total_height))
+                return textExit
+            else:
+                self.lines[target_line].setMinimumHeight(int(total_height))  # 设置最小高度
+                self.lines[target_line].setMaximumHeight(int(total_height))  # 设置最大高度
     def display_response(self, response, index=0):
         """逐字符显示"""
         if index >= len(response):
             return  # 递归终止条件
         with QMutexLocker(self.mutex):
             self.text_lines[-1] = response[:index+1]
+        
             
             if len(self.line_history) > 7:
                 target_line = 5
@@ -216,6 +264,7 @@ class CLIWindow(QMainWindow):
                 target_line = len(self.text_lines) - 1
             
             if target_line < len(self.lines):
+                self.on_text_changed(target_line)
                 self.lines[target_line].setText(self.text_lines[-1])
         
         QTimer.singleShot(100, lambda: self.display_response(response, index + 1))
