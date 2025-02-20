@@ -1,12 +1,8 @@
 import os
 import sys
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import QApplication, QMainWindow,QLineEdit, QVBoxLayout, QWidget
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QShortcut
-from PyQt5.QtCore import QThread, pyqtSignal
-
+from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal , QMutex, QMutexLocker, QMetaObject
+from PyQt5.QtGui import QFont, QKeySequence
+from PyQt5.QtWidgets import QApplication, QMainWindow,QLineEdit, QVBoxLayout, QWidget ,QShortcut, QTextEdit,QSizePolicy
 
 from Config import GlobalVarManager
 from MiraiSingleAdapter import MiraiSingleAdapter
@@ -15,7 +11,7 @@ from loguru import logger
 import Config
 
 class WsListenerThread(QThread):
-    new_message_signal = pyqtSignal(dict)  # 用于传递消息的信号
+    qq_message_signal = pyqtSignal(dict)  # 用于传递消息的信号
 
     def __init__(self,qqAdapter):
         super().__init__()
@@ -24,8 +20,22 @@ class WsListenerThread(QThread):
     def run(self):
         while True:
             message = self.qqAdapter.base_message_receiver()
-            self.new_message_signal.emit(message)
+            self.qq_message_signal.emit(message)
 
+class ScriptManagerPressThread(QThread):
+    script_manager_result_signal = pyqtSignal(str)
+    def __init__(self, script_manager, message):
+        super().__init__()
+        self.script_manager = script_manager
+        self.message = message
+
+    def run(self):
+        if responses := self.script_manager.message_handler(self.message):
+            for res in responses:
+                logger.info(f"Get chat Response: {res}")
+                # 使用信号将处理结果返回到主线程
+                self.script_manager_result_signal.emit(res)
+                
 class CLIWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -48,8 +58,8 @@ class CLIWindow(QMainWindow):
         self.lines = []
         
         for _ in range(7):
-            tempLine = QLineEdit(self)
-            tempLine.setStyleSheet("""QLineEdit {
+            tempLine = QTextEdit(self)
+            tempLine.setStyleSheet("""QTextEdit {
                 background-color: transparent; 
                 color: #619B5F; 
                 font-family: 'Microsoft YaHei Light';
@@ -61,6 +71,7 @@ class CLIWindow(QMainWindow):
             tempLine.setAlignment(Qt.AlignLeft)  # 设置文本左对齐
             tempLine.setReadOnly(True)  # 文本只读
             tempLine.setContentsMargins(0, 0, 0, 0)
+            tempLine.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
             self.lines.insert(0,tempLine)
 
         
@@ -72,7 +83,7 @@ class CLIWindow(QMainWindow):
         self.lines[len(self.line_history)].setReadOnly(False)  # 文本可编辑
         self.lines[len(self.line_history)].setText(self.placeholder_text)  # >文本
         self.lines[len(self.line_history)].setFocus()
-        self.lines[len(self.line_history)].setCursorPosition(len(self.placeholder_text))
+        self.lines[len(self.line_history)].textCursor().setPosition(len(self.placeholder_text))
 
         # 布局设置
         layout = QVBoxLayout()
@@ -96,74 +107,45 @@ class CLIWindow(QMainWindow):
         self.qqAdapter = MiraiSingleAdapter()
         
         self.ws_thread = WsListenerThread(self.qqAdapter)
-        self.ws_thread.new_message_signal.connect(self.on_new_message)  # 连接信号到槽
+        self.ws_thread.qq_message_signal.connect(self.on_qq_message)  # 连接信号到槽
         self.ws_thread.start()  # 启动线程
-    def on_new_message(self,response):
+        
+        self.mutex = QMutex() 
+        
+        
+        # 定时器，模拟加载文本
+        self.loading_timer = QTimer(self)
+        self.loading_timer.timeout.connect(self.update_loading_text)
+        self.dots_count = 0  # 计数，控制文本变化
+        
+    def on_qq_message(self,response):
         logger.info(f"on_new_message: {response}")
                 
         # choose type
         if flattened_message := self.qqAdapter.message_flattener(response):
             self.update_text_show(flattened_message)
-
+    def on_script_manager_message(self,response):
+        logger.info(f"script_manager_result_signal :{response}")
+        if self.loading_timer.isActive():
+            self.loading_timer.stop()
+            self.lines[len(self.text_lines)].setText(self.placeholder_text)  # >文本
+            self.lines[len(self.text_lines)].setReadOnly(True)  # 文本可编辑
+        self.update_text_show(f"{self.bot_name}: {response}")
     def ctrl_q_pressed(self):
         """Ctrl+Q 被按下时触发的操作"""
         if len(self.line_history) > 7 : 
             self.lines[6].setFocus()
-            self.lines[6].setCursorPosition(len(self.placeholder_text))
+            self.lines[6].textCursor().setPosition(len(self.placeholder_text))
         else:
 
             self.lines[len(self.text_lines)].setFocus()
-            self.lines[len(self.text_lines)].setCursorPosition(len(self.placeholder_text))
+            self.lines[len(self.text_lines)].textCursor().setPosition(len(self.placeholder_text))
 
-    def keyPressEvent_bk(self, event):
-        """处理回车事件"""
-        if event.key() != Qt.Key_Return: 
-            return
-        edit_line = self.lines[len(self.text_lines)].text()
-        self.line_history.append(edit_line)  # 记录用户输入
-        self.line_history.append("...") 
-        self.text_lines = self.line_history[-6:] 
-        user_input = edit_line.split(self.split_char)[-1].strip()  # 获取用户输入
-        # 获取当前输入的文本
-        logger.info(f"User input: {user_input}")
-        if user_input.lower() == "exit":  # 输入 "exit" 退出程序
-            self.close()
-            return
-        
-        if len(self.line_history) > 7 : 
-            for line, text in zip(self.lines, self.text_lines):
-                line.setText(text)  # 更新文本行
-            self.lines[6].setReadOnly(False)  # 文本可编辑
-            # self.lines[6].setPlaceholderText()  # 显示输入提示符
-            self.lines[6].setText(self.placeholder_text)  # >文本
-            self.lines[6].setFocus()
-            self.lines[6].setCursorPosition(len(self.placeholder_text))
-        else:
-            for line, text in zip(self.lines, self.text_lines):
-                line.setText(text)  # 更新文本行
-            self.lines[len(self.text_lines)].setReadOnly(False)  # 文本可编辑
-            # self.lines[len(self.text_lines)].setPlaceholderText("> ")  # 显示输入提示符
-            self.lines[len(self.text_lines)].setText(self.placeholder_text)  # >文本
-            self.lines[len(self.text_lines)].setFocus()
-            self.lines[len(self.text_lines)].setCursorPosition(len(self.placeholder_text))
-        
-        message = {'category':'message','content':user_input}
-        if user_input.startswith('/'):
-            message['category'] = 'command'
-        # # 显示响应
-        if responses := self.scriptManager.message_handler(message):
-            for response in responses:
-                logger.info(f"Get chat Response: {response}")
-                self.display_response(f"{self.bot_name}: {response}")
-        
     def keyPressEvent(self, event):
         """处理回车事件"""
         if event.key() != Qt.Key_Return: 
             return
         edit_line = self.lines[len(self.text_lines)].text()
-        self.line_history.append(edit_line)  # 记录用户输入
-        self.line_history.append("...")
-        self.text_lines = self.line_history[-6:]
         user_input = edit_line.split(self.split_char)[-1].strip()  # 获取用户输入
         # 获取当前输入的文本
         logger.info(f"User input: {user_input}")
@@ -171,57 +153,73 @@ class CLIWindow(QMainWindow):
             self.close()
             return
         
+        self.update_text_show(edit_line,need_stream_show=False)
+        
         message = {'category':'message','content':user_input}
         if user_input.startswith('/'):
             message['category'] = 'command'
         # # 显示响应
-        if responses := self.scriptManager.message_handler(message):
-            for response in responses:
-                logger.info(f"Get chat Response: {response}")
-                self.update_text_show(f"{self.bot_name}: {response}")
-        # # 清空输入框
-        # self.text_display.clear()
-    
-    def update_text_show(self,message):
-        message = message.strip() 
-        self.line_history.append(message)  # 记录用户输入
-        self.text_lines = self.line_history[-6:]
-
-        if len(self.line_history) > 7 : 
-            for line, text in zip(self.lines, self.text_lines):
-                line.setText(text)  # 更新文本行
-            self.lines[6].setReadOnly(False)  # 文本可编辑
-            # self.lines[6].setPlaceholderText()  # 显示输入提示符
-            self.lines[6].setText(self.placeholder_text)  # >文本
-            self.lines[6].setFocus()
-            self.lines[6].setCursorPosition(len(self.placeholder_text))
-        else:
-            for line, text in zip(self.lines, self.text_lines):
-                line.setText(text)  # 更新文本行
-            self.lines[len(self.text_lines)].setReadOnly(False)  # 文本可编辑
-            # self.lines[len(self.text_lines)].setPlaceholderText("> ")  # 显示输入提示符
-            self.lines[len(self.text_lines)].setText(self.placeholder_text)  # >文本
-            self.lines[len(self.text_lines)].setFocus()
-            self.lines[len(self.text_lines)].setCursorPosition(len(self.placeholder_text))
-        # # 显示响应
-        self.display_response(message)
         
-    def display_response(self, response):
-        """逐字符流式显示响应"""
-        self.line_history[-1] = response
-        self.text_lines[-1] = ""
-        def add_char(i):
-            """逐个字符添加到响应文本"""
-            if i < len(response):
-                self.text_lines[-1] += response[i]  # 将字符追加到响应行
-                if len(self.line_history) > 7 : 
-                    self.lines[5].setText(self.text_lines[-1])  # 更新显示文本
-                else:
-                    self.lines[len(self.text_lines)-1].setText(self.text_lines[-1]) 
-                QTimer.singleShot(80, lambda: add_char(i + 1))  # 每隔100ms显示下一个字符
+        self.script_manager_thread = ScriptManagerPressThread(self.scriptManager,message)
+        self.script_manager_thread.script_manager_result_signal.connect(self.on_script_manager_message)  # 连接信号到槽
+        self.script_manager_thread.start()  # 启动线程
+        # 开始显示 "..."（类似于loading效果）
+        self.dots_count = 0  # 重置计数
+        self.loading_timer.start(500)  # 每隔500ms更新一次文本，模拟加载效果
+        self.lines[len(self.text_lines)].setReadOnly(False)  # 文本可编辑
+        
+    def update_loading_text(self):
+        """更新加载文本"""
+        # 根据计数更新文本
+        if self.dots_count < 5:
+            self.lines[len(self.text_lines)].setText(self.placeholder_text + '.' * self.dots_count)  # >文本
+            self.dots_count += 1
+        else:
+            self.dots_count = 1
 
-        add_char(0)  # 从第一个字符开始
 
+    def update_text_show(self,message, need_stream_show=True):
+            message = message.strip() 
+            self.line_history.append(message)  # 记录用户输入
+            self.text_lines = self.line_history[-6:]
+
+            if len(self.line_history) > 7 : 
+                for line, text in zip(self.lines, self.text_lines):
+                    line.setText(text)  # 更新文本行
+                self.lines[6].setReadOnly(False)  # 文本可编辑
+                # self.lines[6].setPlaceholderText()  # 显示输入提示符
+                self.lines[6].setText(self.placeholder_text)  # >文本
+                self.lines[6].setFocus()
+                self.lines[6].textCursor().setPosition(len(self.placeholder_text))
+            else:
+                for line, text in zip(self.lines, self.text_lines):
+                    line.setText(text)  # 更新文本行
+                self.lines[len(self.text_lines)].setReadOnly(False)  # 文本可编辑
+                # self.lines[len(self.text_lines)].setPlaceholderText("> ")  # 显示输入提示符
+                self.lines[len(self.text_lines)].setText(self.placeholder_text)  # >文本
+                self.lines[len(self.text_lines)].setFocus()
+                self.lines[len(self.text_lines)].textCursor().setPosition(len(self.placeholder_text))
+            # # 显示响应
+            if need_stream_show:
+                self.display_response(message)
+
+    def display_response(self, response, index=0):
+        """逐字符显示"""
+        if index >= len(response):
+            return  # 递归终止条件
+        with QMutexLocker(self.mutex):
+            self.text_lines[-1] = response[:index+1]
+            
+            if len(self.line_history) > 7:
+                target_line = 5
+            else:
+                target_line = len(self.text_lines) - 1
+            
+            if target_line < len(self.lines):
+                self.lines[target_line].setText(self.text_lines[-1])
+        
+        QTimer.singleShot(100, lambda: self.display_response(response, index + 1))
+            
     def mousePressEvent(self, event):
         """允许窗口拖动"""
         if event.button() == Qt.LeftButton:

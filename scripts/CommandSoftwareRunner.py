@@ -109,6 +109,6 @@ class CommandSoftwareRunner(PluginBase):
         software_name = commands[1]
         res = self.run_software(software_name)
         if res['status'] == 200:
-            return 200,[res['message']]
+            return 200,self.script_name,[res['message']]
         elif res['status'] == 404:
-            return 201,res['message']
+            return 201,self.script_name,res['message']

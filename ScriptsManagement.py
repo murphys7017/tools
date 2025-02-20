@@ -172,7 +172,7 @@ class ScriptManager:
 
     def _extracted_from_message_handler(self, plugin, message):
         logger.info(f'Activate Script: {plugin.__class__.__name__}')
-        code, response = plugin.handle(message)
+        code,script_name, response = plugin.handle(message)
         logger.info(f'Activate Script response: {response}')
         if code == 200:
             return response if isinstance(response, list) else [response]
@@ -188,6 +188,7 @@ class ScriptManager:
         Returns:
             _type_: _description_
         """
+        logger.info(f"message_handler:{message}")
         category = message['category']
         content = message['content']
         for plugin in self.plugin_routers['multis']:

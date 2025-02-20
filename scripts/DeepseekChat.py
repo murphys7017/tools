@@ -6,7 +6,7 @@ from PluginBase import PluginBase
 class DeepseekChat(PluginBase):
     """所有脚本的抽象基类"""
 
-    def __init__(self, script_name='test', author='xx', need_thread=False , is_multi=False):
+    def __init__(self, script_name='DeepseekChat', author='xx', need_thread=False , is_multi=False):
         """初始化方法，必须调用 super"""
         super().__init__(script_name,author,category='message')
         self.script_name = script_name
@@ -26,5 +26,7 @@ class DeepseekChat(PluginBase):
         """文件处理方法
         处理完成之后调用send_result返回处理结果
         """
-
-        return 200,self.dso.chat(message)
+        for res in self.dso.chat(message):
+            if '[对话内容]:' in res:
+                
+                return 200,self.script_name,res.split('[对话内容]:')[1]
