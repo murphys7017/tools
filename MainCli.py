@@ -8,7 +8,6 @@ from Config import GlobalVarManager
 from MiraiSingleAdapter import MiraiSingleAdapter
 from ScriptsManagement import ScriptManager
 from loguru import logger
-import Config
 
 class WsListenerThread(QThread):
     qq_message_signal = pyqtSignal(dict)  # 用于传递消息的信号
@@ -16,6 +15,7 @@ class WsListenerThread(QThread):
     def __init__(self,qqAdapter):
         super().__init__()
         self.qqAdapter=qqAdapter
+        GlobalVarManager.set('qqAdapter',qqAdapter)
 
     def run(self):
         while True:
@@ -210,9 +210,9 @@ class CLIWindow(QMainWindow):
                 # self.lines[6].setPlaceholderText()  # 显示输入提示符
                 self.lines[6].setText(self.placeholder_text)  # >文本
                 self.lines[6].setFocus()
-                cursor = self.lines[len(self.line_history)].textCursor()
+                cursor = self.lines[6].textCursor()
                 cursor.movePosition(QTextCursor.End) # 还可以有别的位置
-                self.lines[len(self.line_history)].setTextCursor(cursor)
+                self.lines[6].setTextCursor(cursor)
             else:
                 for line, text in zip(self.lines, self.text_lines):
                     line.setText(text)  # 更新文本行
