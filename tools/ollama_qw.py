@@ -5,7 +5,6 @@ import yaml
 import tools.tools as tools
 
 class OllamaQW():
-
     def __init__(self, model_name: str='qwen2.5:7b'):
         self.bot_name = 'Alice'
         self.user_name = 'Yakumo Aki'

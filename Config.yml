@@ -3,6 +3,18 @@ UserName: Yakumo Aki
 DeepseekModelName: deepseek-chat
 DeepSeekApiKey: sk-32f06997a5c04ba39f6553368f55458e
 OllamaDeepSeekModelName: deepseek-r1:14b
+
+
+MiraiSingleAdapter:
+  ws: ws://192.168.5.3:8081/all
+  AliasMapPath: data/MiraiSingleAdapter/AliasMap.pkl
+  # 毫秒
+  ResponseWaitTime: 5000
+  Alias:
+    815049548: 本人
+    2877716459: 辉辉
+    830954892: 白给群
+
 ToolsSet: 
   RunSoftware: 
     Paths:

@@ -6,27 +6,42 @@ import websocket
 import datetime
 import time
 from loguru import logger
+import pickle
 
-    
+from Config import GlobalVarManager
+
 class MiraiSingleAdapter:
     def __init__(self, ws_link="ws://192.168.5.3:8081/all"):
-        self.ws_link = ws_link
-        self.function_response_wait_time = 1000 * 5
+        miraiSingleAdapter = GlobalVarManager.get('MiraiSingleAdapter')
+        self.ws_link = miraiSingleAdapter['ws']
+        self.function_response_wait_time = miraiSingleAdapter['ResponseWaitTime']
         self.message_list_max_length = 100
         self.messages = []  # 存储消息
         self.message_func_res = {}  # 存储同步ID与消息的映射
-        self.allow_user = {  # 用户权限
-            "815049548": {
-                "response_group": [830954892],
-                "user_access": {
-                    "message": "ALL",
-                    "event": "ALL",
-                    "command": "ALL"
-                }
-            }
-        }
         
         self.ws = websocket.create_connection(ws_link)
+        
+        self.load_AliasMapPath(miraiSingleAdapter)
+        
+    def load_AliasMapPath(self,miraiSingleAdapter):
+        self.AliasMapPath = miraiSingleAdapter['AliasMapPath']
+        if os.path.exists(self.AliasMapPath):
+            with open(self.AliasMapPath,'rb') as f:
+                self.alias_map = pickle.load(f)
+        else:
+            self.alias_map = {}
+            (filepath, filename) = os.path.split(self.AliasMapPath)
+            if not os.path.exists(filepath):
+                os.makedirs(filepath)
+        for key in miraiSingleAdapter['Alias']:
+            self.alias_map[key] = miraiSingleAdapter['Alias'][key]
+        with open(self.AliasMapPath,'wb') as f:
+            pickle.dump(self.alias_map ,f)
+        
+    def save_alias(self,alias, qq):
+        self.alias_map[qq]=alias
+        with open(self.AliasMapPath,'wb') as f:
+            pickle.dump(self.alias_map ,f)
     def message_flattener(self,response):
         # 获取消息类型
         message_type = response['data'].get('type')
@@ -37,7 +52,10 @@ class MiraiSingleAdapter:
         sender_group = sender.get('group',None)
         
         sender_id = sender.get('id')
+        sender_name = sender.get('remark',sender.get('nickname',sender.get('memberName')))
         
+        
+        from_text = f'{sender_name}({sender_id})'
         
         show_text = ""
         for item in messageChain:
@@ -59,15 +77,13 @@ class MiraiSingleAdapter:
             else:
                 show_text += ' 非文本消息'
                 
+        sender_text = self.alias_map.get(sender_id, f'{sender_name}({sender_id})')
         
         if message_type == 'FriendMessage':
-            sender_name = sender.get('remark',sender.get('nickname'))
-            
-            return f"{sender_name}({sender_id}) ->{show_text}"
+            return f"{sender_text} -> {show_text}"
         elif message_type == 'GroupMessage':
-            sender_name = sender.get('memberName')
-            
-            return f"[{sender_group['name']}({sender_group['id']})]{sender_name}({sender_id}) ->{show_text}"
+            group_text = self.alias_map.get(sender_group['id'], f"{sender_group['name']}({sender_group['id']})")
+            return f"[{group_text}] {sender_text} -> {show_text}"
             
         
     def message_handle(self):

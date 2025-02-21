@@ -53,7 +53,8 @@ class myTextEdit(QTextEdit): #继承 原本组件
         if user_input.lower() == "exit":  # 输入 "exit" 退出程序
             self.parent.close()
             return
-        
+        if len(user_input) < 1:
+            return
         self.parent.update_text_show(edit_line,need_stream_show=False)
         
         message = {'category':'message','content':user_input}
