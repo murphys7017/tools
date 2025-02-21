@@ -47,3 +47,6 @@ Desktop.ini
 
 # PyCharm
 *.iml
+
+# 敏感信息
+/data/MiraiSingleAdapter/AliasMap.pkl
