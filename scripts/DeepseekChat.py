@@ -14,7 +14,7 @@ class DeepseekChat(PluginBase):
         self.need_thread = need_thread
         self.is_multi = is_multi
 
-        self.dso = DeepSeekOnline()
+        self.dso = DeepseekOllama()
         
     def check_message(self,message):
         """检查队列消息，判断是否启动脚本，同时移除使用的消息

@@ -178,6 +178,7 @@ class ScriptManager:
             return response if isinstance(response, list) else [response]
         elif code == 201:
             self.plugin_routers['multis'].append(plugin)
+            return response if isinstance(response, list) else [response]
     
     def message_handler(self, message):
         """_summary_

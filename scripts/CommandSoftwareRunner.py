@@ -34,13 +34,7 @@ class CommandSoftwareRunner(PluginBase):
         logger.info("程序列表加载完成，开始向量化")
         self.SoftwareVectors = [tools.get_vector(response) for response in self.StatMenuSoftware.keys()]
         logger.info("程序列表向量化完成")
-    def next_multi_round(self):
-        self.multi_round_count -= 1
-        if self.multi_round_count < 1:
-            self.multi_round_count = self.multi_round
-            return False
-        else:
-            return True
+    
 
 
     def generate_name_path_map(self,folder_paths, exclude_name, exclude_path,alias):
@@ -90,7 +84,24 @@ class CommandSoftwareRunner(PluginBase):
                 "status": 404,
                 "message": "并未找到您指定的程序，请问是以下几个之一吗："+'、'.join(difflib.get_close_matches(software_name,self.StatMenuSoftware.keys(),3, cutoff=0.5))
             }
-
+    def define_command(self):
+        self.command_structure = {
+            '/run' : {
+                'is_cmd': True,
+                'next': {
+                    'stop': {
+                        'is_cmd': True,
+                        'name':{
+                            'desc': '如果设定了对话窗口直接发送消息，否则报错'
+                        }
+                    },
+                    'name':{
+                        'desc': '如果设定了对话窗口直接发送消息，否则报错'
+                    }
+                }
+            }
+        }
+        return self.command_structure
     def check_message(self,message):
         """检查队列消息，判断是否启动脚本，同时移除使用的消息
         """
@@ -101,14 +112,16 @@ class CommandSoftwareRunner(PluginBase):
         """文件处理方法
         处理完成之后调用send_result返回处理结果
         """
-        commands = message.split(' ')
-        # Todo: 结束程序
-        if commands[1] == 'stop':
-            software_name = commands[2]
-            
-        software_name = commands[1]
-        res = self.run_software(software_name)
-        if res['status'] == 200:
-            return 200,self.script_name,[res['message']]
-        elif res['status'] == 404:
-            return 201,self.script_name,res['message']
+        commands = self.parse_command(message)
+        
+        if '/run' in commands:
+            run_cmd = commands['/run']
+            if 'stop' in run_cmd:
+                return 200,self.script_name,'此功能正在开发中'
+            elif 'name' in run_cmd:
+                software_name = run_cmd['name']['value']
+                res = self.run_software(software_name)
+                if res['status'] == 200:
+                    return 200,self.script_name,[res['message']]
+                elif res['status'] == 404:
+                    return 201,self.script_name,res['message']

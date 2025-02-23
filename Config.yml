@@ -2,7 +2,7 @@ BotName: Alice
 UserName: Yakumo Aki
 DeepseekModelName: deepseek-chat
 DeepSeekApiKey: sk-32f06997a5c04ba39f6553368f55458e
-OllamaDeepSeekModelName: deepseek-r1:14b
+OllamaDeepSeekModelName: deepseek-r1:8b
 
 
 MiraiSingleAdapter:

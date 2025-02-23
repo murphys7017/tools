@@ -98,7 +98,6 @@ class CLIWindow(QMainWindow):
                 background-color: transparent; 
                 color: #619B5F; 
                 font-family: 'Microsoft YaHei Light';
-                font-size: 14px;
                 border: none;
                 padding: 0px;
                 }
